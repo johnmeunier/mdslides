@@ -1,0 +1,11 @@
+{
+  "name": "mdslide",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "slides:pdf": "node scripts/export-slides-pdf.mjs"
+  },
+  "dependencies": {
+    "pdf-lib": "^1.17.1"
+  }
+}
