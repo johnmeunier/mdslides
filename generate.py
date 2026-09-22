@@ -181,6 +181,17 @@ def parse_front_matter(text: str) -> tuple[dict, str]:
   return meta, text[:start_offset] + body
 
 
+SUPPORTED_THEMES = {"corpo", "corail"}
+
+
+def normalize_theme(value: object) -> str:
+  """Retourne un theme connu, avec le theme corpo comme valeur de repli."""
+  theme = slugify_kebab(str(value or ""))
+  if theme in ("", "default", "corporate", "corpo"):
+    return "corpo"
+  return theme if theme in SUPPORTED_THEMES else "corpo"
+
+
 # ── Parser content.md ────────────────────────────────────────────────────────
 def parse_content(text: str) -> list[dict]:
   # Supporte la syntaxe markdown-first: "---content" au lieu de "---" puis "type: content".
@@ -791,7 +802,7 @@ def _render_content_text_blocks(lines: list[str], source_file: str, conference_d
         for row in rows
       )
       blocks.append(
-        f'<div class="content-text reveal" style="transition-delay:{reveal_idx*0.08:.2f}s">'
+        f'<div class="content-text content-table reveal" style="transition-delay:{reveal_idx*0.08:.2f}s">'
         f'<div class="md-table-wrap"><table class="md-table"><thead><tr>{thead}</tr></thead><tbody>{tbody}</tbody></table></div>'
         f'</div>'
       )
@@ -1199,10 +1210,11 @@ def render_slide(slide: dict, idx: int, total: int, source_file: str, conference
 
 
 # ── Assemblage HTML complet ───────────────────────────────────────────────────
-def build_html(slides: list[dict], font_b64: str, footer_cfg: dict, page_title: str, source_file: str, conference_dir: str) -> str:
+def build_html(slides: list[dict], font_b64: str, footer_cfg: dict, page_title: str, source_file: str, conference_dir: str, theme: str) -> str:
   total = len(slides)
   footer_html = render_footer(footer_cfg)
   slides_html = "\n".join(render_slide(s, i + 1, total, source_file, conference_dir) for i, s in enumerate(slides))
+  theme_class = f"theme-{normalize_theme(theme)}"
   speaker_notes_json = json.dumps(
     [slide.get("notes", []) for slide in slides],
     ensure_ascii=False,
@@ -1216,6 +1228,7 @@ def build_html(slides: list[dict], font_b64: str, footer_cfg: dict, page_title: 
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>{esc(page_title)}</title>
 <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@700,500,400&display=swap" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&family=Nunito:wght@400;500;600;700;800&display=swap" />
 <style>
 @font-face {{
   font-family: "Publico Headline";
@@ -2433,6 +2446,244 @@ blockquote::after  {{ content: "\u201D"; color: var(--corpo-red); font-size: 1.2
   box-shadow: 0 12px 34px rgba(0,0,0,0.18);
 }}
 
+body.theme-corail {{
+  --corail-ink: #243447;
+  --corail-paper: #fffaf1;
+  --corail-coral: #ff6b5f;
+  --corail-mint: #b8eedc;
+  --corail-sky: #b9e1ff;
+  --corail-yellow: #ffd166;
+  --font-display: "Caveat", "Segoe Print", "Bradley Hand", cursive;
+  --font-body: "Nunito", "Avenir Next", sans-serif;
+  --corpo-blue: var(--corail-coral);
+  --corpo-blue-mid: #e85d52;
+  --corpo-blue-light: #e8f5ff;
+  --corpo-red: var(--corail-coral);
+  --corpo-teal: #159a83;
+  background: var(--corail-paper);
+  color: var(--corail-ink);
+}}
+body.theme-corail .slide {{
+  align-items: center;
+  justify-content: flex-start;
+  padding: clamp(4.5rem, 8vh, 6rem) clamp(1.25rem, 4vw, 4rem);
+}}
+body.theme-corail .slide::before {{
+  opacity: 0.22;
+  background-image:
+    radial-gradient(circle at 12% 18%, rgba(255, 107, 95, 0.17) 0 0.35rem, transparent 0.4rem),
+    radial-gradient(circle at 87% 78%, rgba(21, 154, 131, 0.15) 0 0.45rem, transparent 0.5rem);
+  background-size: 13rem 13rem, 17rem 17rem;
+}}
+body.theme-corail .slide:not(.slide-image-fullscreen):not(.slide-iframe-fullscreen) .slide-content {{
+  max-width: min(92vw, 1500px);
+  margin-inline: auto;
+}}
+body.theme-corail .slide-image-fullscreen,
+body.theme-corail .slide-iframe-fullscreen {{
+  padding: 0 0 var(--slide-footer-height);
+}}
+body.theme-corail h1,
+body.theme-corail h2,
+body.theme-corail h3,
+body.theme-corail blockquote,
+body.theme-corail .big-number,
+body.theme-corail .agenda-num,
+body.theme-corail .stat-num {{
+  letter-spacing: 0;
+}}
+body.theme-corail h1,
+body.theme-corail h2 {{
+  color: var(--corail-ink);
+  line-height: 1.04;
+}}
+body.theme-corail p,
+body.theme-corail li {{ color: var(--corail-ink); }}
+body.theme-corail .slide:not(.slide-title):not(.slide-closing):not(.slide-subtitle-break) h1 {{
+  font-size: clamp(2.75rem, 6.5vh, 5.5rem);
+  margin-bottom: clamp(1.75rem, 4vh, 3.5rem);
+}}
+body.theme-corail .slide-title h1 {{
+  font-size: clamp(4rem, 9vw, 7rem);
+  line-height: 0.98;
+  max-width: 15ch;
+}}
+body.theme-corail .slide-title .subtitle,
+body.theme-corail .slide-subtitle {{
+  margin-top: clamp(1rem, 2vh, 1.75rem);
+}}
+body.theme-corail .slide-title,
+body.theme-corail .slide-bio,
+body.theme-corail .slide-closing {{
+  background: var(--corail-coral);
+  color: #fff;
+}}
+body.theme-corail .slide-title::after {{
+  width: 46vw;
+  background: linear-gradient(135deg, transparent 35%, rgba(255, 209, 102, 0.52) 36% 48%, transparent 49% 58%, rgba(184, 238, 220, 0.5) 59% 72%, transparent 73%);
+}}
+body.theme-corail .slide-agenda,
+body.theme-corail .slide-text,
+body.theme-corail .slide-stat,
+body.theme-corail .slide-stats-row,
+body.theme-corail .slide-cards,
+body.theme-corail .slide-image,
+body.theme-corail .slide-iframe {{
+  background: var(--corail-paper);
+  color: var(--corail-ink);
+}}
+body.theme-corail .slide-subtitle-break,
+body.theme-corail .slide-quote {{
+  background: var(--corail-mint);
+  color: var(--corail-ink);
+}}
+body.theme-corail .tag {{
+  background: var(--corail-yellow);
+  color: var(--corail-ink);
+  border-radius: 999px;
+  transform: rotate(-2deg);
+  letter-spacing: 0.04em;
+  box-shadow: 3px 4px 0 rgba(36, 52, 71, 0.12);
+}}
+body.theme-corail .slide-title h1,
+body.theme-corail .slide-title h2,
+body.theme-corail .slide-title p,
+body.theme-corail .slide-bio h1,
+body.theme-corail .slide-bio h2,
+body.theme-corail .slide-bio p,
+body.theme-corail .slide-closing h1,
+body.theme-corail .slide-closing h2,
+body.theme-corail .slide-closing p {{ color: #fff; }}
+body.theme-corail .slide-title .speaker,
+body.theme-corail .slide-closing .contact {{ opacity: 0.78; }}
+body.theme-corail .slide-subtitle-break .slide-content {{ min-height: 58vh; }}
+body.theme-corail .slide-subtitle-break h1 {{ max-width: 18ch; }}
+body.theme-corail .agenda-list li {{ opacity: 1; }}
+body.theme-corail .agenda-num,
+body.theme-corail .bullets:not(.bullets-ordered) li::before,
+body.theme-corail .bullets.bullets-ordered li::before {{ color: var(--corail-coral); }}
+body.theme-corail .card {{
+  background: #fff;
+  border: 2px solid var(--corail-sky);
+  border-left: 8px solid var(--corail-coral);
+  border-radius: 18px 7px 18px 7px;
+  box-shadow: 5px 6px 0 rgba(36, 52, 71, 0.1);
+  transform: rotate(-0.7deg);
+}}
+body.theme-corail .card:nth-child(even) {{
+  border-left-color: var(--corail-yellow);
+  transform: rotate(0.7deg);
+}}
+body.theme-corail .card h3 {{ color: var(--corail-ink); }}
+body.theme-corail .card p {{ color: var(--corail-ink); opacity: 0.76; }}
+body.theme-corail .big-number {{ color: var(--corail-coral); }}
+body.theme-corail .stat-label {{ color: var(--corail-ink); opacity: 0.64; }}
+body.theme-corail .stat-num {{ color: var(--corail-coral) !important; }}
+body.theme-corail blockquote::before,
+body.theme-corail blockquote::after {{ color: var(--corail-coral); }}
+body.theme-corail .quote-attr strong {{ color: var(--corail-coral); }}
+body.theme-corail .quote-copy-btn,
+body.theme-corail .code-copy-btn {{
+  background: var(--corail-yellow);
+  border-color: var(--corail-ink);
+  color: var(--corail-ink);
+}}
+body.theme-corail .inline-emph {{
+  background: var(--corail-sky);
+  border-color: transparent;
+  color: var(--corail-ink);
+  box-shadow: none;
+}}
+body.theme-corail .ext-link {{ color: var(--corail-coral); }}
+body.theme-corail .slide-image-frame,
+body.theme-corail .slide-iframe-frame,
+body.theme-corail .mermaid-wrap {{
+  border-color: rgba(36, 52, 71, 0.16);
+  background: rgba(255, 255, 255, 0.58);
+  box-shadow: 8px 10px 0 rgba(36, 52, 71, 0.1);
+}}
+body.theme-corail .content-table {{
+  width: 100%;
+  max-width: none;
+}}
+body.theme-corail .md-table-wrap {{
+  width: 100%;
+  max-width: none;
+  background: #f4f5f3;
+  border: 1px solid rgba(36, 52, 71, 0.2);
+  border-radius: 12px;
+  box-shadow: 8px 10px 0 rgba(36, 52, 71, 0.1);
+  overflow: hidden;
+}}
+body.theme-corail .md-table th,
+body.theme-corail .md-table td {{
+  border-right: 1px solid rgba(36, 52, 71, 0.1);
+  border-bottom: 1px solid rgba(36, 52, 71, 0.12);
+}}
+body.theme-corail .md-table th:last-child,
+body.theme-corail .md-table td:last-child {{ border-right: 0; }}
+body.theme-corail .md-table tbody tr:last-child td {{ border-bottom: 0; }}
+body.theme-corail .md-table th {{
+  color: var(--corail-ink);
+  background: #eaeeeb;
+}}
+body.theme-corail .md-table td {{ color: var(--corail-ink); }}
+body.theme-corail .code-block {{
+  background: #243447;
+  border-color: rgba(36, 52, 71, 0.22);
+  box-shadow: 8px 10px 0 rgba(36, 52, 71, 0.12);
+}}
+body.theme-corail .code-lang {{ color: var(--corail-yellow); }}
+body.theme-corail .slide-footer {{
+  min-height: clamp(1.7rem, 2.7vh, 2rem);
+  padding: 0 clamp(1.25rem, 4vw, 4rem);
+  font-size: clamp(0.75rem, 0.9vw, 0.9rem);
+  background: rgba(242, 157, 46, 0.6);
+  border-top: 0;
+  color: var(--corail-ink);
+  opacity: 1;
+  align-items: center;
+}}
+body.theme-corail .toc-toggle,
+body.theme-corail .notes-toggle {{
+  background: var(--corail-ink);
+  border-color: rgba(255,255,255,0.55);
+}}
+body.theme-corail .toc-panel,
+body.theme-corail .notes-panel {{
+  background: var(--corail-paper);
+  border-left-color: rgba(36, 52, 71, 0.18);
+  color: var(--corail-ink);
+}}
+body.theme-corail .toc-title,
+body.theme-corail .toc-item-btn,
+body.theme-corail .notes-content {{ color: var(--corail-ink); }}
+body.theme-corail .toc-item-btn:hover {{ background: rgba(185, 225, 255, 0.55); }}
+body.theme-corail .toc-item-btn.active {{ background: rgba(255, 209, 102, 0.55); }}
+body.theme-corail .slide-inverse,
+body.theme-corail .slide-inverse.slide-title,
+body.theme-corail .slide-inverse.slide-agenda,
+body.theme-corail .slide-inverse.slide-text,
+body.theme-corail .slide-inverse.slide-stat,
+body.theme-corail .slide-inverse.slide-stats-row,
+body.theme-corail .slide-inverse.slide-cards,
+body.theme-corail .slide-inverse.slide-quote,
+body.theme-corail .slide-inverse.slide-image,
+body.theme-corail .slide-inverse.slide-bio,
+body.theme-corail .slide-inverse.slide-subtitle-break,
+body.theme-corail .slide-inverse.slide-closing {{
+  background: #e8f5ff !important;
+  color: var(--corail-ink);
+}}
+body.theme-corail .slide-inverse h1,
+body.theme-corail .slide-inverse h2,
+body.theme-corail .slide-inverse h3,
+body.theme-corail .slide-inverse p,
+body.theme-corail .slide-inverse li {{ color: var(--corail-ink); }}
+body.theme-corail .slide-inverse .tag {{ background: var(--corail-yellow); color: var(--corail-ink); }}
+body.theme-corail .slide-inverse .card {{ background: rgba(255,255,255,0.72); }}
+body.theme-corail .slide-inverse .slide-title::after {{ display: none; }}
+
 /* ── Print ───────────────────────────────────────────────────────────── */
 @media print {{
   html, body {{ overflow: visible; scroll-snap-type: none; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
@@ -2450,7 +2701,7 @@ blockquote::after  {{ content: "\u201D"; color: var(--corpo-red); font-size: 1.2
 }}
 </style>
 </head>
-<body>
+<body class="{theme_class}">
 
 <div class="top-controls" data-no-nav="true">
   <div id="fs-hint">F — Plein écran &nbsp;·&nbsp; ↑↓ Naviguer &nbsp;·&nbsp; M — Menu</div>
@@ -3146,8 +3397,9 @@ def generate(font_b64: str, source_file: str) -> None:
 
     footer_cfg = build_footer_config(meta)
     page_title = build_page_title(meta)
+    theme = normalize_theme(meta.get("theme"))
     conference_dir = conference_dir_from_source(source_file)
-    html = build_html(slides, font_b64, footer_cfg, page_title, source_file, conference_dir)
+    html = build_html(slides, font_b64, footer_cfg, page_title, source_file, conference_dir, theme)
     html = minify_html(html)  # Minifier avant écriture
     output_file = output_file_from_source(source_file)
     markdown_file = markdown_file_from_source(source_file)

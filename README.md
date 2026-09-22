@@ -22,7 +22,7 @@ This repository generates HTML presentations from Markdown files, then exports t
 
 **Incoming features :**
 - [] Support for additional slide types
-- [] Theme support
+- [x] Theme support (`corpo` by default, `corail` available)
 - [] Auto internationalization
 
 ## Prerequisites
