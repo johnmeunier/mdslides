@@ -1243,6 +1243,7 @@ def build_html(slides: list[dict], font_b64: str, footer_cfg: dict, page_title: 
   --corpo-blue-light: #EEEEF8;
   --corpo-red:        #FF1721;
   --corpo-teal:       #5CC8E2;
+  --heading-em-gradient: linear-gradient(110deg, #5CC8E2 0%, #FFFFFF 92%);
   --font-display: "Publico Headline", Georgia, serif;
   --font-body:    'Satoshi', system-ui, -apple-system, sans-serif;
   --title-size:   clamp(3rem, 8vw, 6rem);
@@ -2460,6 +2461,7 @@ body.theme-corail {{
   --corpo-blue-light: #e8f5ff;
   --corpo-red: var(--corail-coral);
   --corpo-teal: #159a83;
+  --heading-em-gradient: linear-gradient(110deg, var(--corail-yellow) 0%, var(--corail-mint) 92%);
   background: var(--corail-paper);
   color: var(--corail-ink);
 }}
@@ -2683,6 +2685,33 @@ body.theme-corail .slide-inverse li {{ color: var(--corail-ink); }}
 body.theme-corail .slide-inverse .tag {{ background: var(--corail-yellow); color: var(--corail-ink); }}
 body.theme-corail .slide-inverse .card {{ background: rgba(255,255,255,0.72); }}
 body.theme-corail .slide-inverse .slide-title::after {{ display: none; }}
+
+/* ── Heading emphasis ───────────────────────────────────────────────── */
+h1 em,
+h2 em,
+h3 em,
+.slide-subtitle em,
+.subtitle em {{
+  background-image: var(--heading-em-gradient);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+}}
+.slide-inverse h1 em,
+.slide-inverse h2 em,
+.slide-inverse h3 em,
+.slide-inverse .slide-subtitle em,
+.slide-inverse .subtitle em {{
+  --heading-em-gradient: linear-gradient(110deg, var(--corpo-blue) 0%, var(--corpo-teal) 92%);
+}}
+body.theme-corail .slide-inverse h1 em,
+body.theme-corail .slide-inverse h2 em,
+body.theme-corail .slide-inverse h3 em,
+body.theme-corail .slide-inverse .slide-subtitle em,
+body.theme-corail .slide-inverse .subtitle em {{
+  --heading-em-gradient: linear-gradient(110deg, var(--corail-coral) 0%, var(--corail-teal, #159a83) 92%);
+}}
 
 /* ── Print ───────────────────────────────────────────────────────────── */
 @media print {{
