@@ -181,6 +181,8 @@ scrolling: true
 # Visualisation des tokens
 ```
 
+Add `full-screen: true` to show only the iframe, with 30px side margins and space reserved for the slide header and footer. Other slide content is hidden.
+
 ### Closing
 
 ```md
