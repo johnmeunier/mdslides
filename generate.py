@@ -1746,8 +1746,7 @@ blockquote::after  {{ content: "\u201D"; color: var(--corpo-red); font-size: 1.2
 }}
 .slide-iframe-fullscreen {{
   box-sizing: border-box;
-  padding-top: 3.5rem;
-  padding-bottom: 2.5rem;
+  padding: 3.5rem 30px var(--iframe-footer-height, var(--slide-footer-height));
   overflow: hidden;
 }}
 .slide-iframe-fullscreen .slide-content {{
@@ -2314,6 +2313,7 @@ blockquote::after  {{ content: "\u201D"; color: var(--corpo-red); font-size: 1.2
 }}
 
 @media (max-width: 900px) {{
+  :root {{ --iframe-footer-height: 3.5rem; }}
   .slide-closing-with-image .closing-layout {{
     gap: clamp(0.75rem, 3vw, 1.5rem);
   }}
@@ -2461,7 +2461,7 @@ body.theme-corail {{
   --corpo-blue-light: #e8f5ff;
   --corpo-red: var(--corail-coral);
   --corpo-teal: #159a83;
-  --heading-em-gradient: linear-gradient(110deg, var(--corail-yellow) 0%, var(--corail-mint) 92%);
+  --heading-em-gradient: linear-gradient(110deg, var(--corail-coral) 0%, var(--corail-teal) 92%);
   background: var(--corail-paper);
   color: var(--corail-ink);
 }}
@@ -2482,8 +2482,11 @@ body.theme-corail .slide:not(.slide-image-fullscreen):not(.slide-iframe-fullscre
   margin-inline: auto;
 }}
 body.theme-corail .slide-image-fullscreen,
-body.theme-corail .slide-iframe-fullscreen {{
+body.theme-corail .slide-image-fullscreen {{
   padding: 0 0 var(--slide-footer-height);
+}}
+body.theme-corail .slide-iframe-fullscreen {{
+  padding: 3.5rem 30px max(2rem, var(--iframe-footer-height, var(--slide-footer-height)));
 }}
 body.theme-corail h1,
 body.theme-corail h2,
