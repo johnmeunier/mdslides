@@ -538,6 +538,16 @@ def build_page_title(meta: dict) -> str:
     return f"{presentation_title} - {author}"
 
 
+def build_timer_seconds(meta: dict) -> int:
+    """Retourne la durée du timer en secondes, ou 0 si elle est invalide ou absente."""
+    raw_value = str(meta.get("timer", "") or "").strip().replace(",", ".")
+    try:
+      minutes = float(raw_value)
+    except ValueError:
+      return 0
+    return max(0, round(minutes * 60))
+
+
 def render_footer(footer_cfg: dict) -> str:
     left = str(footer_cfg.get("left", "")).strip()
     center = str(footer_cfg.get("center", "")).strip()
@@ -1214,7 +1224,7 @@ def render_slide(slide: dict, idx: int, total: int, source_file: str, conference
 
 
 # ── Assemblage HTML complet ───────────────────────────────────────────────────
-def build_html(slides: list[dict], font_b64: str, footer_cfg: dict, page_title: str, source_file: str, conference_dir: str, theme: str) -> str:
+def build_html(slides: list[dict], font_b64: str, footer_cfg: dict, page_title: str, source_file: str, conference_dir: str, theme: str, timer_seconds: int = 0) -> str:
   total = len(slides)
   footer_html = render_footer(footer_cfg)
   slides_html = "\n".join(render_slide(s, i + 1, total, source_file, conference_dir) for i, s in enumerate(slides))
@@ -2122,7 +2132,8 @@ blockquote::after  {{ content: "\u201D"; color: var(--corpo-red); font-size: 1.2
   pointer-events: none;
 }}
 .toc-toggle,
-.notes-toggle {{
+.notes-toggle,
+.timer-toggle {{
   border: 1px solid rgba(255, 255, 255, 0.28);
   background: rgba(7, 7, 24, 0.78);
   color: #fff;
@@ -2136,14 +2147,17 @@ blockquote::after  {{ content: "\u201D"; color: var(--corpo-red); font-size: 1.2
   transition: background 140ms ease, border-color 140ms ease, transform 140ms ease;
 }}
 .toc-toggle:hover,
-.notes-toggle:hover {{
+.notes-toggle:hover,
+.timer-toggle:hover {{
   background: rgba(17, 17, 42, 0.95);
   border-color: rgba(255, 255, 255, 0.48);
 }}
 .toc-toggle:active,
-.notes-toggle:active {{ transform: scale(0.97); }}
+.notes-toggle:active,
+.timer-toggle:active {{ transform: scale(0.97); }}
 .toc-toggle:focus-visible,
-.notes-toggle:focus-visible {{
+.notes-toggle:focus-visible,
+.timer-toggle:focus-visible {{
   outline: 2px solid var(--corpo-teal);
   outline-offset: 2px;
 }}
@@ -2153,6 +2167,25 @@ blockquote::after  {{ content: "\u201D"; color: var(--corpo-red); font-size: 1.2
   font-size: 0.78rem;
   font-weight: 700;
 }}
+.timer-toggle {{
+  --timer-progress: 0;
+  width: auto;
+  min-width: 4.25rem;
+  padding: 0 0.7rem;
+  border: 1px solid transparent;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.78rem;
+  font-weight: 700;
+  background:
+    linear-gradient(rgba(7, 7, 24, 0.78), rgba(7, 7, 24, 0.78)) padding-box,
+    conic-gradient(from -90deg, rgba(255, 255, 255, 0.9) calc(var(--timer-progress) * 1turn), rgba(255, 255, 255, 0.28) 0) border-box;
+}}
+.timer-toggle:hover {{
+  background:
+    linear-gradient(rgba(17, 17, 42, 0.95), rgba(17, 17, 42, 0.95)) padding-box,
+    conic-gradient(from -90deg, rgba(255, 255, 255, 0.95) calc(var(--timer-progress) * 1turn), rgba(255, 255, 255, 0.48) 0) border-box;
+}}
+.timer-toggle.is-expired {{ color: #ffb3aa; }}
 .toc-toggle-icon {{
   width: 1rem;
   height: 0.75rem;
@@ -2742,6 +2775,7 @@ body.theme-corail .slide-inverse .subtitle em {{
 <div class="top-controls" data-no-nav="true">
   <div id="fs-hint">F — Plein écran &nbsp;·&nbsp; ↑↓ Naviguer &nbsp;·&nbsp; M — Menu</div>
   <button type="button" id="notes-toggle" class="notes-toggle" aria-controls="notes-panel" aria-expanded="false">Notes</button>
+  {f'<button type="button" id="presentation-timer" class="timer-toggle" aria-label="Réinitialiser le temps restant" title="Réinitialiser le temps restant">{timer_seconds // 60:02d}:{timer_seconds % 60:02d}</button>' if timer_seconds else ''}
   <button type="button" id="toc-toggle" class="toc-toggle" aria-label="Ouvrir le menu des slides" aria-controls="toc-panel" aria-expanded="false">
     <span class="toc-toggle-icon"><span></span></span>
   </button>
@@ -2809,12 +2843,44 @@ const notesToggleBtn = document.querySelector('#notes-toggle');
 const notesPanelEl = document.querySelector('#notes-panel');
 const notesContentEl = document.querySelector('#notes-content');
 const notesCloseBtn = document.querySelector('#notes-close');
+const timerEl = document.querySelector('#presentation-timer');
+const timerDurationSeconds = {timer_seconds};
 const speakerNotes = {speaker_notes_json};
 let _currentIdx = 0;
 let _activeRevealIdx = -1;
 let _revealTimer = 0;
 let _typewriterRun = 0;
 let _tocButtonsBySlide = new Map();
+let _timerStartedAt = 0;
+let _timerFrame = 0;
+
+function renderTimer() {{
+  if (!timerEl || !_timerStartedAt || !timerDurationSeconds) return;
+  const elapsedSeconds = (Date.now() - _timerStartedAt) / 1000;
+  const remainingSeconds = Math.max(0, timerDurationSeconds - elapsedSeconds);
+  const wholeSeconds = Math.ceil(remainingSeconds);
+  timerEl.textContent = `${{Math.floor(wholeSeconds / 60)}}:${{String(wholeSeconds % 60).padStart(2, '0')}}`;
+  timerEl.style.setProperty('--timer-progress', String(Math.min(1, elapsedSeconds / timerDurationSeconds)));
+  timerEl.classList.toggle('is-expired', remainingSeconds <= 0);
+  if (remainingSeconds > 0) _timerFrame = requestAnimationFrame(renderTimer);
+}}
+
+function startTimerAfterFirstSlide(idx) {{
+  if (!timerEl || _timerStartedAt || idx <= 0) return;
+  _timerStartedAt = Date.now();
+  renderTimer();
+}}
+
+function resetTimer() {{
+  if (!timerEl || !timerDurationSeconds) return;
+  if (_timerFrame) cancelAnimationFrame(_timerFrame);
+  _timerFrame = 0;
+  _timerStartedAt = _currentIdx > 0 ? Date.now() : 0;
+  timerEl.textContent = `${{Math.floor(timerDurationSeconds / 60)}}:${{String(timerDurationSeconds % 60).padStart(2, '0')}}`;
+  timerEl.style.setProperty('--timer-progress', '0');
+  timerEl.classList.remove('is-expired');
+  if (_timerStartedAt) renderTimer();
+}}
 
 function slideMainTitle(slide, idx) {{
   const titleEl = slide ? slide.querySelector('h1') : null;
@@ -3070,6 +3136,7 @@ function animateSlideReveal(slide, immediate = false) {{
 
 function setActiveSlide(idx, immediate = false) {{
   const clamped = Math.max(0, Math.min(idx, slides.length - 1));
+  startTimerAfterFirstSlide(clamped);
   if (clamped === _activeRevealIdx && !immediate) return;
 
   slides.forEach((slide, i) => {{
@@ -3115,6 +3182,7 @@ function refreshFooterVisibility(idx) {{
 function goToIndex(idx, smooth = true) {{
   if (!slides.length) return;
   const clamped = Math.max(0, Math.min(idx, slides.length - 1));
+  startTimerAfterFirstSlide(clamped);
   _currentIdx = clamped;
   refreshFooterVisibility(clamped);
   setHashForIndex(clamped);
@@ -3202,6 +3270,13 @@ if (notesToggleBtn) {{
     e.preventDefault();
     e.stopPropagation();
     toggleNotes();
+  }});
+}}
+if (timerEl) {{
+  timerEl.addEventListener('click', e => {{
+    e.preventDefault();
+    e.stopPropagation();
+    resetTimer();
   }});
 }}
 if (notesCloseBtn) {{
@@ -3434,8 +3509,9 @@ def generate(font_b64: str, source_file: str) -> None:
     footer_cfg = build_footer_config(meta)
     page_title = build_page_title(meta)
     theme = normalize_theme(meta.get("theme"))
+    timer_seconds = build_timer_seconds(meta)
     conference_dir = conference_dir_from_source(source_file)
-    html = build_html(slides, font_b64, footer_cfg, page_title, source_file, conference_dir, theme)
+    html = build_html(slides, font_b64, footer_cfg, page_title, source_file, conference_dir, theme, timer_seconds)
     html = minify_html(html)  # Minifier avant écriture
     output_file = output_file_from_source(source_file)
     markdown_file = markdown_file_from_source(source_file)

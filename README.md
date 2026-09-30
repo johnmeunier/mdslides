@@ -81,6 +81,17 @@ Visible text on the slide.
 
 Comments are also excluded from PDF exports.
 
+## Presentation Timer
+
+Set `timer` in the front matter to display a countdown in the presentation header. Its value is expressed in minutes and may be fractional. The timer starts when the presentation leaves the first slide; click it to reset the countdown.
+
+```md
+---
+presentation-title: My presentation
+timer: 20
+---
+```
+
 ## Generate the PDF
 
 The available npm command is:
