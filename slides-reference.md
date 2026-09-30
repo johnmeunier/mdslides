@@ -27,6 +27,16 @@ A line beginning with `>>` is a note for the speaker. It is removed from the vis
 
 Notes can be placed anywhere in a slide block. The `>>` prefix must appear at the beginning of the line, after any optional whitespace. They are not displayed on the slide and are not included in the PDF export.
 
+## Hide a Slide (`hidden`)
+
+Add `hidden: true` anywhere in a slide block to exclude that slide from the generated HTML and PDF exports. This option works with every slide type.
+
+```md
+---content
+hidden: true
+# Draft slide
+```
+
 ## Global Front Matter
 
 YAML front matter lets you manage presentation metadata:

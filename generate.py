@@ -206,7 +206,7 @@ def parse_content(text: str) -> list[dict]:
     "quote", "author", "role",
     "stat", "stat-label", "caption",
     "src", "alt", "full-screen", "scrolling",
-    "display-category-title", "inverse",
+    "display-category-title", "inverse", "hidden",
     "card-1-title", "card-1-body", "card-2-title", "card-2-body", "card-3-title", "card-3-body",
     "card-4-title", "card-4-body", "card-5-title", "card-5-body", "card-6-title", "card-6-body",
     "stat-1-value", "stat-1-label", "stat-2-value", "stat-2-label", "stat-3-value", "stat-3-label",
@@ -485,6 +485,10 @@ def parse_content(text: str) -> list[dict]:
         slide["subtitle"] = h2_list[0]
       if not slide.get("label") and h3_list:
         slide["label"] = h3_list[0]
+
+    hidden_flag = str(slide.get("hidden", "false")).strip().lower()
+    if hidden_flag in ("1", "true", "yes", "y", "oui"):
+      continue
 
     slides.append(slide)
 
