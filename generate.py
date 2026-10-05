@@ -193,6 +193,11 @@ def normalize_theme(value: object) -> str:
 
 
 # ── Parser content.md ────────────────────────────────────────────────────────
+def is_hidden_slide(slide: dict) -> bool:
+  hidden_flag = str(slide.get("hidden", "false")).strip().lower()
+  return hidden_flag in ("1", "true", "yes", "y", "oui")
+
+
 def parse_content(text: str) -> list[dict]:
   # Supporte la syntaxe markdown-first: "---content" au lieu de "---" puis "type: content".
   text = re.sub(r"(?m)^\s*---\s*([a-zA-Z0-9-]+)\s*$", r"---\ntype: \1", text)
@@ -486,8 +491,7 @@ def parse_content(text: str) -> list[dict]:
       if not slide.get("label") and h3_list:
         slide["label"] = h3_list[0]
 
-    hidden_flag = str(slide.get("hidden", "false")).strip().lower()
-    if hidden_flag in ("1", "true", "yes", "y", "oui"):
+    if is_hidden_slide(slide):
       continue
 
     slides.append(slide)
@@ -1225,6 +1229,7 @@ def render_slide(slide: dict, idx: int, total: int, source_file: str, conference
 
 # ── Assemblage HTML complet ───────────────────────────────────────────────────
 def build_html(slides: list[dict], font_b64: str, footer_cfg: dict, page_title: str, source_file: str, conference_dir: str, theme: str, timer_seconds: int = 0) -> str:
+  slides = [slide for slide in slides if not is_hidden_slide(slide)]
   total = len(slides)
   footer_html = render_footer(footer_cfg)
   slides_html = "\n".join(render_slide(s, i + 1, total, source_file, conference_dir) for i, s in enumerate(slides))
@@ -2286,6 +2291,16 @@ blockquote::after  {{ content: "\u201D"; color: var(--corpo-red); font-size: 1.2
   flex-direction: column;
   gap: 0.16rem;
 }}
+.toc-subsublist {{
+  list-style: none;
+  margin: 0;
+  margin-left: 1rem;
+  padding-left: 0.65rem;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 0.16rem;
+}}
 .toc-item-btn {{
   width: 100%;
   border: 0;
@@ -2308,6 +2323,10 @@ blockquote::after  {{ content: "\u201D"; color: var(--corpo-red); font-size: 1.2
 .toc-item-btn.toc-sub {{
   font-size: 0.88rem;
   color: rgba(255, 255, 255, 0.86);
+}}
+.toc-item-btn.toc-subsub {{
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.72);
 }}
 .toc-item-btn:hover {{
   background: rgba(92, 200, 226, 0.14);
@@ -2972,8 +2991,6 @@ function buildToc() {{
   tocListEl.innerHTML = '';
   _tocButtonsBySlide = new Map();
 
-  const mainTitles = slides.map((slide, idx) => slideMainTitle(slide, idx));
-
   function registerButtonForSlide(slideIdx, btn) {{
     const entry = _tocButtonsBySlide.get(slideIdx) || [];
     entry.push(btn);
@@ -3009,44 +3026,80 @@ function buildToc() {{
     return btn;
   }}
 
-  let i = 0;
-  while (i < slides.length) {{
-    const groupTitle = mainTitles[i];
-    let j = i + 1;
-    while (j < slides.length && mainTitles[j] === groupTitle) {{
-      j += 1;
-    }}
+  function appendSlideButton(list, slideIdx, titleText, level) {{
+    const item = document.createElement('li');
+    item.appendChild(createTocButton(slideIdx, titleText, level));
+    list.appendChild(item);
+  }}
 
-    const groupSize = j - i;
-    if (groupSize >= 2) {{
-      const groupLi = document.createElement('li');
-      groupLi.className = 'toc-group';
+  function appendSection(sectionStart, sectionEnd) {{
+    const section = slides[sectionStart];
+    const sectionItem = document.createElement('li');
+    sectionItem.className = 'toc-group';
+    const sectionButton = createTocButton(sectionStart, slideMainTitle(section, sectionStart), 'toc-main');
+    sectionItem.appendChild(sectionButton);
 
-      const groupMainBtn = createTocButton(i, groupTitle, 'toc-main');
-      groupLi.appendChild(groupMainBtn);
+    if (sectionStart + 1 < sectionEnd) {{
+      const sectionList = document.createElement('ol');
+      sectionList.className = 'toc-sublist';
+      const titleGroups = new Map();
 
-      const subList = document.createElement('ol');
-      subList.className = 'toc-sublist';
-
-      for (let k = i; k < j; k++) {{
-        const subLi = document.createElement('li');
-        const subBtn = createTocButton(k, slideSubTitle(slides[k], k), 'toc-sub');
-        subLi.appendChild(subBtn);
-        subList.appendChild(subLi);
-
-        // Un slide groupe active aussi l'entree principale du groupe.
-        registerButtonForSlide(k, groupMainBtn);
+      for (let slideIdx = sectionStart + 1; slideIdx < sectionEnd; slideIdx += 1) {{
+        const title = slideMainTitle(slides[slideIdx], slideIdx);
+        const entries = titleGroups.get(title) || [];
+        entries.push(slideIdx);
+        titleGroups.set(title, entries);
       }}
 
-      groupLi.appendChild(subList);
-      tocListEl.appendChild(groupLi);
-    }} else {{
-      const li = document.createElement('li');
-      li.appendChild(createTocButton(i, groupTitle, 'toc-main'));
-      tocListEl.appendChild(li);
+      for (const [title, slideIndexes] of titleGroups) {{
+        if (slideIndexes.length === 1) {{
+          appendSlideButton(sectionList, slideIndexes[0], title, 'toc-sub');
+          registerButtonForSlide(slideIndexes[0], sectionButton);
+          continue;
+        }}
+
+        const titleItem = document.createElement('li');
+        titleItem.className = 'toc-group';
+        const titleButton = createTocButton(slideIndexes[0], title, 'toc-sub');
+        titleItem.appendChild(titleButton);
+
+        const slideList = document.createElement('ol');
+        slideList.className = 'toc-subsublist';
+        for (const slideIdx of slideIndexes) {{
+          appendSlideButton(slideList, slideIdx, slideSubTitle(slides[slideIdx], slideIdx), 'toc-subsub');
+          registerButtonForSlide(slideIdx, titleButton);
+          registerButtonForSlide(slideIdx, sectionButton);
+        }}
+        titleItem.appendChild(slideList);
+        sectionList.appendChild(titleItem);
+      }}
+
+      sectionItem.appendChild(sectionList);
     }}
 
-    i = j;
+    tocListEl.appendChild(sectionItem);
+  }}
+
+  let sectionStart = -1;
+  for (let slideIdx = 0; slideIdx < slides.length; slideIdx += 1) {{
+    if (!slides[slideIdx].classList.contains('slide-subtitle-break')) continue;
+
+    if (sectionStart >= 0) {{
+      appendSection(sectionStart, slideIdx);
+    }} else {{
+      for (let leadingIdx = 0; leadingIdx < slideIdx; leadingIdx += 1) {{
+        appendSlideButton(tocListEl, leadingIdx, slideMainTitle(slides[leadingIdx], leadingIdx), 'toc-main');
+      }}
+    }}
+    sectionStart = slideIdx;
+  }}
+
+  if (sectionStart >= 0) {{
+    appendSection(sectionStart, slides.length);
+  }} else {{
+    for (let slideIdx = 0; slideIdx < slides.length; slideIdx += 1) {{
+      appendSlideButton(tocListEl, slideIdx, slideMainTitle(slides[slideIdx], slideIdx), 'toc-main');
+    }}
   }}
 }}
 
