@@ -2517,7 +2517,7 @@ body.theme-corail {{
   --corpo-blue-light: #e8f5ff;
   --corpo-red: var(--corail-coral);
   --corpo-teal: #159a83;
-  --heading-em-gradient: linear-gradient(110deg, var(--corail-coral) 0%, var(--corail-teal) 92%);
+  --heading-em-gradient: linear-gradient(110deg, var(--corail-coral) 0%, var(--corpo-teal) 92%);
   background: var(--corail-paper);
   color: var(--corail-ink);
 }}
@@ -2751,6 +2751,8 @@ h2 em,
 h3 em,
 .slide-subtitle em,
 .subtitle em {{
+  padding-inline-end: 0.3em;
+  margin-inline-end: -0.3em;
   background-image: var(--heading-em-gradient);
   background-clip: text;
   -webkit-background-clip: text;
