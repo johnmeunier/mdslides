@@ -31,7 +31,8 @@ def minify_html(html: str) -> str:
         # Supprimer commentaires CSS
         css = re.sub(r'/\*[\s\S]*?\*/', '', css)
         # Supprimer espaces autour des caractères spéciaux
-        css = re.sub(r'\s*([{}:;,>+~])\s*', r'\1', css)
+        css = re.sub(r'\s*([{};,>~])\s*', r'\1', css)
+        css = re.sub(r':\s+', ':', css)
         css = re.sub(r'\s+', ' ', css)
         # Supprimer les espaces avant les accolades
         css = re.sub(r'\s+\{', '{', css)
@@ -181,7 +182,7 @@ def parse_front_matter(text: str) -> tuple[dict, str]:
   return meta, text[:start_offset] + body
 
 
-SUPPORTED_THEMES = {"corpo", "corail"}
+SUPPORTED_THEMES = {"clean", "corpo", "corail"}
 
 
 def normalize_theme(value: object) -> str:
@@ -1234,6 +1235,19 @@ def build_html(slides: list[dict], font_b64: str, footer_cfg: dict, page_title: 
   footer_html = render_footer(footer_cfg)
   slides_html = "\n".join(render_slide(s, i + 1, total, source_file, conference_dir) for i, s in enumerate(slides))
   theme_class = f"theme-{normalize_theme(theme)}"
+  clean_hexagons = []
+  for column in range(13):
+    for row in range(9):
+      center_x = column * 54
+      center_y = row * 62 + (column % 2) * 31
+      opacity = 0.14 * max(0, 1 - ((center_x - 410) / 320) ** 2 - ((center_y - 310) / 250) ** 2) ** 2
+      if opacity < 0.001:
+        continue
+      points = " ".join(f"{center_x + offset_x},{center_y + offset_y}" for offset_x, offset_y in ((36, 0), (18, 31), (-18, 31), (-36, 0), (-18, -31), (18, -31)))
+      clean_hexagons.append(f'<polygon points="{points}" opacity="{opacity:.3f}"/>')
+  clean_pattern = base64.b64encode(
+    ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 560"><g fill="none" stroke="#00008f" stroke-width="0.7">' + "".join(clean_hexagons) + '</g></svg>').encode("ascii")
+  ).decode("ascii")
   speaker_notes_json = json.dumps(
     [slide.get("notes", []) for slide in slides],
     ensure_ascii=False,
@@ -1246,8 +1260,9 @@ def build_html(slides: list[dict], font_b64: str, footer_cfg: dict, page_title: 
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>{esc(page_title)}</title>
-<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@700,500,400&display=swap" />
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@{'700,500,400,300' if normalize_theme(theme) == 'clean' else '700,500,400'}&display=swap" />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&family=Nunito:wght@400;500;600;700;800&display=swap" />
+{'<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@300&display=swap" />' if normalize_theme(theme) == 'clean' else ''}
 <style>
 @font-face {{
   font-family: "Publico Headline";
@@ -2774,6 +2789,234 @@ body.theme-corail .slide-inverse .subtitle em {{
   --heading-em-gradient: linear-gradient(110deg, var(--corail-coral) 0%, var(--corail-teal, #159a83) 92%);
 }}
 
+body.theme-clean {{
+  --clean-ink: #303033;
+  --clean-muted: #626268;
+  --clean-line: #e4e4e8;
+  --clean-surface: #f7f7fa;
+  --clean-accent: #00008f;
+  --font-display: 'Satoshi', 'Avenir Next', sans-serif;
+  --corpo-blue: var(--clean-accent);
+  --corpo-blue-mid: #1414a0;
+  --corpo-blue-light: var(--clean-surface);
+  --corpo-red: #b42338;
+  --corpo-teal: var(--clean-accent);
+  --title-size: 4rem;
+  --h2-size: 3rem;
+  --h3-size: 1.5rem;
+  --body-size: 1.5rem;
+  --small-size: 1.125rem;
+  --content-gap: clamp(1.25rem, 3vh, 2.5rem);
+  background: #fff;
+  color: var(--clean-ink);
+  font-weight: 400;
+  letter-spacing: 0;
+}}
+body.theme-clean .slide {{ background: #fff; color: var(--clean-ink); }}
+body.theme-clean .slide:not(.slide-image-fullscreen):not(.slide-iframe-fullscreen) {{
+  align-items: flex-start;
+  padding: clamp(5rem, 14vh, 9rem) clamp(1.5rem, 6vw, 7rem) 4rem;
+}}
+body.theme-clean .slide:not(.slide-image-fullscreen):not(.slide-iframe-fullscreen) .slide-content {{
+  max-width: 1400px;
+  margin-inline: auto;
+}}
+body.theme-clean .slide::before,
+body.theme-clean .slide-title::after {{ display: none; }}
+body.theme-clean :is(.slide-title, .slide-subtitle-break)::before {{
+  display: block;
+  inset: auto -16% -18vw auto;
+  width: 65%;
+  height: auto;
+  aspect-ratio: 9 / 7;
+  opacity: 1;
+  background-image: url("data:image/svg+xml;base64,{clean_pattern}");
+  background-repeat: no-repeat;
+  background-position: right bottom;
+  background-size: contain;
+}}
+body.theme-clean :is(h1, h2, h3, blockquote, .big-number, .stat-num, .agenda-num) {{
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--clean-ink);
+  line-height: 1.2;
+}}
+body.theme-clean :is(h1, h2) {{ text-wrap: balance; overflow-wrap: anywhere; }}
+body.theme-clean .slide h1 {{ font-family: "Source Serif 4", Georgia, serif; font-weight: 300; }}
+body.theme-clean .slide-title h1 {{ max-width: 24ch; font-weight: 300; }}
+body.theme-clean .slide:not(.slide-title):not(.slide-closing):not(.slide-subtitle-break) h1 {{
+  margin-bottom: 1.5rem;
+  line-height: 1.2;
+}}
+body.theme-clean :is(p, li, .subtitle, .slide-subtitle) {{
+  color: var(--clean-muted);
+  font-weight: 400;
+  opacity: 1;
+}}
+body.theme-clean .slide :is(.slide-subtitle, .subtitle) {{ font-size: calc(var(--body-size) * 1.25); font-weight: 700; line-height: 1.4; }}
+body.theme-clean .stat-label-heading {{ font-weight: 700; }}
+body.theme-clean :is(.tag, .label) {{
+  display: block;
+  width: 100%;
+  padding: 0 0 1rem;
+  margin-bottom: 1.75rem;
+  border-bottom: 1px solid var(--clean-line);
+  border-radius: 0;
+  background: transparent;
+  color: var(--clean-accent);
+  font-size: 0.875rem;
+  font-weight: 500;
+  letter-spacing: 0;
+}}
+body.theme-clean .slide-title .speaker,
+body.theme-clean :is(.contact, .stat-label, .quote-attr, .image-caption) {{ color: var(--clean-muted); opacity: 1; }}
+body.theme-clean .slide.slide-subtitle-break:not(.slide-image-fullscreen):not(.slide-iframe-fullscreen) {{
+  align-items: center;
+  justify-content: center;
+  padding: clamp(1.5rem, 4vw, 4rem);
+}}
+body.theme-clean .slide.slide-subtitle-break:not(.slide-image-fullscreen):not(.slide-iframe-fullscreen) .slide-content {{
+  max-width: 1600px;
+  align-items: center;
+  text-align: center;
+  min-height: 0;
+}}
+body.theme-clean .slide-subtitle-break h1 {{ font-size: 5.5rem; max-width: none; font-weight: 300; }}
+body.theme-clean .slide-subtitle-break .slide-subtitle {{
+  max-width: 60ch;
+  margin: 1.5rem auto 0;
+  font-size: calc(var(--body-size) * 1.5);
+}}
+body.theme-clean :is(.slide-closing .closing-layout, .bio-grid) {{ min-height: 0; }}
+body.theme-clean .slide-closing .closing-copy {{ text-align: left; }}
+body.theme-clean .slide-closing .subtitle {{ margin-inline: 0; }}
+body.theme-clean :is(.agenda-num, .big-number, .stat-num) {{ color: var(--clean-accent) !important; font-weight: 300; }}
+body.theme-clean .big-number {{ font-family: "Source Serif 4", Georgia, serif; font-weight: 300; font-size: 8rem; overflow-wrap: anywhere; }}
+body.theme-clean .stat-num {{ font-size: 4rem; }}
+body.theme-clean .agenda-list {{ gap: 1.25rem; }}
+body.theme-clean .agenda-num {{ font-size: 1.5rem; }}
+body.theme-clean .bullets {{ gap: 0.75rem; }}
+body.theme-clean .bullets:not(.bullets-ordered) li::before {{ content: '\\2022'; }}
+body.theme-clean .inline-emph {{
+  padding: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--clean-accent);
+  font-weight: 500;
+  box-shadow: none;
+}}
+body.theme-clean :is(h1, h2, h3, .slide-subtitle, .subtitle) em {{
+  background: none;
+  color: var(--clean-accent);
+  -webkit-text-fill-color: currentColor;
+  font-style: normal;
+}}
+body.theme-clean .cards-grid {{ gap: 1.5rem; margin-top: 2.5rem; }}
+body.theme-clean .card {{
+  padding: 1.75rem;
+  background: #fff;
+  border: 1px solid var(--clean-line);
+  border-radius: 8px;
+  box-shadow: none;
+}}
+body.theme-clean .card h3 {{ color: var(--clean-accent); font-size: 1.375rem; font-weight: 500; margin-bottom: 0.75rem; }}
+body.theme-clean .card p {{ font-size: var(--small-size); line-height: 1.6; }}
+body.theme-clean blockquote {{ font-size: 2.5rem; font-weight: 300; text-wrap: balance; }}
+body.theme-clean :is(blockquote::before, blockquote::after) {{ color: var(--clean-accent); }}
+body.theme-clean :is(.ext-link, .cta-link, .quote-attr strong) {{ color: var(--clean-accent); font-weight: 500; }}
+body.theme-clean .ext-link:hover {{ color: #1414a0; }}
+body.theme-clean :is(.slide-image-frame, .slide-iframe-frame, .mermaid-wrap, .md-table-wrap, .code-block, .bio-media) {{
+  background: var(--clean-surface);
+  border-color: var(--clean-line);
+  border-radius: 8px;
+  box-shadow: none;
+}}
+body.theme-clean :is(.slide-image-media, .slide-iframe-media, .md-image) {{ border-radius: 8px; }}
+body.theme-clean :is(.image-missing, .bio-media-missing) {{ border-color: var(--clean-line); color: var(--clean-muted); }}
+body.theme-clean .mermaid-wrap {{ background: transparent; border: 0; padding: 0; height: min(50vh, calc(100dvh - 24rem)); }}
+body.theme-clean .mermaid {{ color: var(--clean-ink); }}
+body.theme-clean :is(.md-table th, .md-table td) {{ border-color: var(--clean-line); color: var(--clean-ink); }}
+body.theme-clean .md-table th {{ background: #fff; color: var(--clean-accent); font-weight: 700; }}
+body.theme-clean .content-table {{ width: 100%; max-width: none; }}
+body.theme-clean .md-table-wrap {{ width: 100%; max-width: none; background: #fff; border: 0; border-radius: 0; }}
+body.theme-clean .code-header {{ background: #fff; border-color: var(--clean-line); }}
+body.theme-clean :is(.code-scroll code, .hljs) {{ color: var(--clean-ink); }}
+body.theme-clean :is(.hljs-comment, .hljs-quote) {{ color: #6a6a73; }}
+body.theme-clean :is(.hljs-keyword, .hljs-selector-tag, .hljs-doctag, .hljs-title, .hljs-section, .hljs-symbol, .hljs-bullet, .hljs-link) {{ color: #00008f; }}
+body.theme-clean :is(.hljs-string, .hljs-regexp, .hljs-addition, .hljs-attr, .hljs-attribute, .hljs-name, .hljs-selector-class, .hljs-selector-id) {{ color: #176647; }}
+body.theme-clean :is(.hljs-number, .hljs-literal, .hljs-deletion, .hljs-meta, .hljs-tag) {{ color: #b42338; }}
+body.theme-clean :is(.hljs-title.class_, .hljs-type, .hljs-built_in, .hljs-variable, .hljs-template-variable, .hljs-selector-attr, .hljs-selector-pseudo) {{ color: #75431a; }}
+body.theme-clean :is(.quote-copy-btn, .code-copy-btn, .toc-toggle, .notes-toggle, .toc-close) {{
+  background: #fff;
+  border-color: var(--clean-line);
+  color: var(--clean-muted);
+  border-radius: 6px;
+}}
+body.theme-clean :is(.quote-copy-btn, .code-copy-btn, .toc-toggle, .notes-toggle, .toc-close):hover {{ background: var(--clean-surface); border-color: var(--clean-accent); }}
+body.theme-clean .timer-toggle {{
+  color: var(--clean-accent);
+  background: linear-gradient(#fff, #fff) padding-box,
+    conic-gradient(from -90deg, var(--clean-accent) calc(var(--timer-progress) * 1turn), var(--clean-line) 0) border-box;
+}}
+body.theme-clean .timer-toggle.is-expired {{ color: var(--corpo-red); }}
+body.theme-clean #fs-hint {{ display: none; }}
+body.theme-clean .top-controls {{ z-index: 920; }}
+body.theme-clean :is(.toc-panel, .notes-panel) {{ background: #fff; border-color: var(--clean-line); box-shadow: none; }}
+body.theme-clean :is(.toc-panel, .notes-panel).open {{ box-shadow: -8px 0 30px rgba(0,0,0,0.06); }}
+body.theme-clean :is(.toc-title, .toc-item-btn, .notes-content) {{ color: var(--clean-ink); letter-spacing: 0; }}
+body.theme-clean :is(.toc-header, .toc-sublist, .toc-subsublist) {{ border-color: var(--clean-line); }}
+body.theme-clean .toc-item-btn:hover {{ background: var(--clean-surface); }}
+body.theme-clean .toc-item-btn.active {{ background: #eeeeF8; color: var(--clean-accent); }}
+body.theme-clean .slide-footer {{ background: #fff; color: var(--clean-muted); border-color: var(--clean-line); opacity: 1; padding-inline: 6vw; }}
+body.theme-clean .slide-num {{ top: auto; left: auto; right: 6vw; bottom: calc(var(--slide-footer-height) + 1rem); color: var(--clean-muted); opacity: 1; font-variant-numeric: tabular-nums; }}
+body.theme-clean .reveal {{ transform: translateY(12px); filter: none; transition: opacity 240ms ease, transform 240ms ease; }}
+body.theme-clean .reveal.visible {{ transform: none; }}
+body.theme-clean .slide-inverse {{ background: var(--clean-surface) !important; color: var(--clean-ink); }}
+body.theme-clean .slide-inverse :is(h1, h2, h3, p, li) {{ color: var(--clean-ink); }}
+body.theme-clean .slide-inverse .tag {{ background: transparent; color: var(--clean-accent); }}
+body.theme-clean .slide-inverse .card {{ background: #fff; }}
+body.theme-clean .slide-image-fullscreen :is(.slide-image-frame, .slide-image-media),
+body.theme-clean .slide-iframe-fullscreen :is(.slide-iframe-frame, .slide-iframe-media) {{ border-radius: 0; background: transparent; }}
+@media (max-height: 700px) {{
+  body.theme-clean {{ --title-size: 3rem; --h2-size: 2.5rem; --body-size: 1.25rem; }}
+  body.theme-clean .slide-subtitle-break h1 {{ font-size: 4rem; }}
+  body.theme-clean .slide:not(.slide-image-fullscreen):not(.slide-iframe-fullscreen) {{ padding-top: 5rem; }}
+}}
+@media (max-height: 600px) {{
+  body.theme-clean {{ --title-size: 2.5rem; --h2-size: 2rem; --content-gap: 1rem; }}
+  body.theme-clean .cards-grid {{ margin-top: 1rem; gap: 1rem; }}
+  body.theme-clean .card {{ padding: 1rem; }}
+}}
+@media (max-height: 500px) {{
+  body.theme-clean .slide-subtitle-break h1 {{ font-size: 3rem; }}
+  body.theme-clean .slide:not(.slide-image-fullscreen):not(.slide-iframe-fullscreen) {{ padding-top: 3.5rem; padding-bottom: 3rem; }}
+  body.theme-clean :is(.tag, .label) {{ margin-bottom: 0.75rem; padding-bottom: 0.5rem; }}
+}}
+@media (max-width: 700px) {{
+  body.theme-clean {{ --title-size: 2rem; --h2-size: 1.75rem; --body-size: 1.125rem; }}
+  body.theme-clean .slide-subtitle-break h1 {{ font-size: 2.75rem; }}
+  body.theme-clean .slide:not(.slide-image-fullscreen):not(.slide-iframe-fullscreen) {{ padding: 4.5rem 1.5rem 5rem; }}
+  body.theme-clean .cards-grid {{ grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem; margin-top: 1.25rem; }}
+  body.theme-clean .card {{ padding: 0.875rem; }}
+  body.theme-clean .card h3 {{ font-size: 1.125rem; overflow-wrap: anywhere; }}
+  body.theme-clean .cards-grid:has(.card:nth-child(3)):not(:has(.card:nth-child(4))) {{ grid-template-columns: 1fr; gap: 0.5rem; }}
+  body.theme-clean .cards-grid:has(.card:nth-child(3)):not(:has(.card:nth-child(4))) .card {{ padding: 0.625rem; }}
+  body.theme-clean .cards-grid:has(.card:nth-child(3)):not(:has(.card:nth-child(4))) .card p {{ line-height: 1.35; }}
+  body.theme-clean blockquote {{ font-size: 1.75rem; }}
+  body.theme-clean .bio-media {{ width: min(38vw, 180px); }}
+  body.theme-clean .bio-grid {{ gap: 1rem; }}
+  body.theme-clean .slide-closing-with-image .closing-layout {{ grid-template-columns: 1fr; }}
+  body.theme-clean .closing-media {{ max-height: 28vh; }}
+  body.theme-clean .stat-row {{ gap: 1.5rem; }}
+  body.theme-clean .stat-num {{ font-size: 2.5rem; }}
+  body.theme-clean .big-number {{ font-size: 3rem; }}
+  body.theme-clean .slide-footer {{ font-size: 0.625rem; grid-template-columns: 1fr; }}
+  body.theme-clean :is(.footer-center, .footer-right) {{ display: none; }}
+}}
+
 /* ── Print ───────────────────────────────────────────────────────────── */
 @media print {{
   html, body {{ overflow: visible; scroll-snap-type: none; -webkit-print-color-adjust: exact; print-color-adjust: exact; }}
@@ -2825,19 +3068,20 @@ body.theme-corail .slide-inverse .subtitle em {{
 <script type="module">
 import mermaid from "https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs";
 
+const cleanTheme = document.body.classList.contains('theme-clean');
 mermaid.initialize({{
   startOnLoad: false,
   securityLevel: "strict",
   htmlLabels: false,
   theme: "base",
   themeVariables: {{
-    background: "#080818",
-    primaryColor: "#1414A0",
-    primaryTextColor: "#FFFFFF",
-    primaryBorderColor: "#5CC8E2",
-    lineColor: "#5CC8E2",
-    secondaryColor: "#101046",
-    tertiaryColor: "#161616",
+    background: cleanTheme ? "#FFFFFF" : "#080818",
+    primaryColor: cleanTheme ? "#EEEEF8" : "#1414A0",
+    primaryTextColor: cleanTheme ? "#303033" : "#FFFFFF",
+    primaryBorderColor: cleanTheme ? "#00008F" : "#5CC8E2",
+    lineColor: cleanTheme ? "#626268" : "#5CC8E2",
+    secondaryColor: cleanTheme ? "#F7F7FA" : "#101046",
+    tertiaryColor: cleanTheme ? "#FFFFFF" : "#161616",
     fontFamily: "Satoshi, system-ui, sans-serif"
   }},
   flowchart: {{

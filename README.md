@@ -22,7 +22,7 @@ This repository generates HTML presentations from Markdown files, then exports t
 
 **Incoming features :**
 - [] Support for additional slide types
-- [x] Theme support (`corpo` by default, `corail` available)
+- [x] Theme support (`corpo` by default, `corail` and `clean` available)
 - [] Auto internationalization
 
 ## Prerequisites
@@ -67,6 +67,20 @@ Quick explanation:
 - without an option, the script attempts to generate HTML from `content.md`
 - `--input` lets you target any Markdown file
 - `--watch` automatically regenerates the HTML when the Markdown changes
+
+## Themes
+
+The default theme remains `corpo`. To use the minimal white theme with generous
+spacing, serif slide titles, bold subtitles and restrained blue accents, set `clean` in the
+Markdown front matter:
+
+```md
+---
+theme: clean
+---
+```
+
+The `corail` theme remains available as well.
 
 ## Speaker Notes
 

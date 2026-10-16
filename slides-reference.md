@@ -55,6 +55,10 @@ footer:
 
 The `theme` key is optional. It defaults to `corpo`, the current AXA-style theme. Set `theme: corail` to use the airy, coral-colored theme with handwritten headings.
 
+Set `theme: clean` for a minimal white theme with generous margins, serif slide
+titles, larger bold subtitles, gray body text, blue accents and thin card borders. Selecting
+this theme does not change the default for other presentations.
+
 ## Markdown Mapping by Slide Type
 
 - `main slide title` => `#`
