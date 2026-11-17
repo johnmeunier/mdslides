@@ -19,11 +19,14 @@ This repository generates HTML presentations from Markdown files, then exports t
   - Closing
   - Iframe
 - Support mermaid diagrams
+- Broadcast synchronized slides on the local network
+- Use a smartphone as a password-protected remote with speaker notes and the shared timer
 
 **Incoming features :**
-- [] Support for additional slide types
+- [x] Support for additional slide types
 - [x] Theme support (`corpo` by default, `corail` and `clean` available)
 - [] Auto internationalization
+- [x] Smartphone as a remote and note viewer
 
 ## Prerequisites
 
@@ -105,6 +108,75 @@ presentation-title: My presentation
 timer: 20
 ---
 ```
+
+## LAN Broadcast and Smartphone Remote
+
+Install the optional server dependency in a virtual environment:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python3 -m pip install -r requirements.txt
+```
+
+Start the server on demand with a Markdown presentation:
+
+```bash
+python3 generate.py --input <PATH_TO_MD_FILE> --serve
+```
+
+The terminal displays:
+
+- the LAN broadcast URL, for example `http://192.168.1.42:8000/`
+- the remote URL, for example `http://192.168.1.42:8000/?mode=remote`
+- a randomly generated remote password
+- a local presenter URL: open it on the computer to control the slides using the
+  usual keyboard, mouse and notes panel
+- a scannable **QR code directly in the terminal**, granting access to the
+  smartphone remote without typing the password
+
+Use a reasonably wide terminal with a light background around the QR code.
+If scanning is difficult, open the remote URL and enter the displayed password.
+
+The phone and computer must be on the same network. Allow incoming connections
+to the selected port in the computer's firewall. Guest Wi-Fi or access-point
+client isolation may prevent devices from communicating.
+
+The public broadcast follows the current slide in read-only mode. Authenticated
+remotes and the local presenter share navigation and the countdown; a newly
+connected viewer immediately joins the current slide. The countdown starts when
+leaving the first slide and can be reset remotely. The phone displays the current
+slide's notes, which are never embedded in the broadcast HTML or returned by the
+public state API. Multiple authenticated remotes can control the same presentation.
+
+The remote shows the timer and slide counter at the top, internally scrollable
+notes in the middle, and a fixed bottom navigation bar. The next-slide button
+occupies half the bar. Tap the timer to reset it. Authentication and connection
+errors only appear when needed.
+
+Choose a different port or network interface when necessary:
+
+```bash
+python3 generate.py --input <PATH_TO_MD_FILE> --serve --port 9000 --address 192.168.1.42
+```
+
+`--address` is the computer's LAN IPv4 address, not the phone's address.
+`--port 0` selects an available port automatically.
+
+Stop with **Ctrl+C**. Each launch creates a new password, QR access token and
+presentation state, invalidating previous sessions. The server serves an
+in-memory snapshot without writing an HTML file or exposing the source directory.
+Restart it after editing the Markdown; `--serve` cannot be combined with `--watch`.
+
+**Privacy:** this is plain HTTP for a trusted local network, not an Internet
+hosting service. Do not forward its port to the Internet. Keep the password,
+presenter link and QR code private: anyone possessing them can read notes and
+control the slides. LAN peers able to intercept HTTP traffic can also obtain
+credentials. No cloud relay is used. Existing external fonts, diagrams or embeds
+may still require Internet access.
+
+Tests: `python3 -m unittest discover -s tests -v` and
+`node --test tests/client.test.mjs`.
 
 ## Generate the PDF
 

@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>Telecommande MDSlides</title>
+  <style>
+    :root { color-scheme: dark; font-family: system-ui, sans-serif; background: #101726; color: #f1f5ff; }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    main { max-width: 640px; margin: auto; }
+    button, input { font: inherit; min-height: 52px; border-radius: 12px; padding: 12px;
+      border: 1px solid #526078; color: inherit; background: #202d45; }
+    button { cursor: pointer; touch-action: manipulation; }
+    button:disabled { opacity: .4; cursor: default; }
+    button:focus-visible, input:focus-visible { outline: 3px solid #94b9ff; }
+    input { width: 100%; margin: 12px 0; }
+    #login { padding: 20px; }
+    #controls { position: fixed; inset: 0; width: 100%; max-width: 640px; margin: auto;
+      display: grid; grid-template-rows: auto minmax(0, 1fr) auto;
+      padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right))
+        max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); gap: 12px; }
+    .summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .navigation { display: grid; grid-template-columns: 1fr 1fr 3fr 1fr;
+      overflow: hidden; border-radius: 12px; }
+    .navigation button { min-width: 0; min-height: 72px; border-radius: 0; padding: 8px 2px;
+      font-family: monospace; font-size: 1.75rem; }
+    #next { background: #285fc2; font-size: 2.5rem; font-weight: 700; }
+    #timer { font-variant-numeric: tabular-nums; font-size: 2.5rem; padding: 4px 12px; }
+    #timer.expired { color: #ff9c96; }
+    #position { margin: 0; color: #b9c8e3; font-variant-numeric: tabular-nums; }
+    #notes { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.65; background: #19243a;
+      border-radius: 12px; padding: 20px; min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+    #status { position: fixed; top: max(12px, env(safe-area-inset-top)); left: 12px; right: 12px;
+      max-width: 616px; margin: auto; padding: 12px; z-index: 1;
+      background: #202d45; border: 1px solid #ffcd93; border-radius: 12px; color: #ffcd93; line-height: 1.4; }
+    body:has(#controls[hidden]) #status { position: static; margin: 20px; }
+    [hidden] { display: none !important; }
+  </style>
+  <script src="/client.js" defer></script>
+  <script src="/remote.js" defer></script>
+</head>
+<body>
+<main>
+  <p id="status" role="status" aria-live="polite">Connexion au serveur...</p>
+  <form id="login" hidden>
+    <label for="password">Mot de passe affiche dans le terminal</label>
+    <input id="password" type="password" autocomplete="current-password" required>
+    <button type="submit">Se connecter</button>
+  </form>
+  <section id="controls" hidden aria-label="Commandes de presentation">
+    <header class="summary">
+      <button id="timer" data-action="reset_timer" aria-label="Temps restant : cliquer pour reinitialiser le timer"
+        title="Reinitialiser le timer">--:--</button>
+      <p id="position" aria-label="Slide courante"></p>
+    </header>
+    <div id="notes" tabindex="0" role="region" aria-label="Notes de la slide"></div>
+    <div class="navigation">
+      <button data-action="first" aria-label="Premiere slide" title="Premiere slide">|&lt;</button>
+      <button data-action="previous" aria-label="Slide precedente" title="Slide precedente">&lt;</button>
+      <button id="next" data-action="next" aria-label="Slide suivante" title="Slide suivante">&gt;</button>
+      <button data-action="last" aria-label="Derniere slide" title="Derniere slide">&gt;|</button>
+    </div>
+  </section>
+</main>
+</body>
+</html>
