@@ -6,6 +6,7 @@ Usage:
   python3 generate.py                         # génération unique depuis content.md
   python3 generate.py --watch                 # regénère automatiquement dès que content.md change
   python3 generate.py --input path/to/file.md # génère depuis un autre markdown
+  python3 generate.py --input path/to/file.md --serve # diffusion et telecommande LAN
 """
 
 import base64, json, mimetypes, os, sys, re, time, hashlib, unicodedata
@@ -3131,12 +3132,17 @@ function renderTimer() {{
 }}
 
 function startTimerAfterFirstSlide(idx) {{
+  if (window.mdslidesNetwork) return;
   if (!timerEl || _timerStartedAt || idx <= 0) return;
   _timerStartedAt = Date.now();
   renderTimer();
 }}
 
 function resetTimer() {{
+  if (window.mdslidesNetwork && !window.mdslidesNetwork.applying) {{
+    window.mdslidesNetwork.command({{ action: 'reset_timer' }});
+    return;
+  }}
   if (!timerEl || !timerDurationSeconds) return;
   if (_timerFrame) cancelAnimationFrame(_timerFrame);
   _timerFrame = 0;
@@ -3479,6 +3485,10 @@ function refreshFooterVisibility(idx) {{
   footerEl.style.display = hide ? 'none' : 'grid';
 }}
 function goToIndex(idx, smooth = true) {{
+  if (window.mdslidesNetwork && !window.mdslidesNetwork.applying) {{
+    window.mdslidesNetwork.navigate(idx);
+    return;
+  }}
   if (!slides.length) return;
   const clamped = Math.max(0, Math.min(idx, slides.length - 1));
   startTimerAfterFirstSlide(clamped);
@@ -3492,10 +3502,22 @@ function goToIndex(idx, smooth = true) {{
     setActiveSlide(clamped);
   }}, smooth ? 220 : 0);
 }}
-function goNext() {{ goToIndex(currentSlideIndex() + 1); }}
-function goPrev() {{ goToIndex(currentSlideIndex() - 1); }}
-function goHome() {{ goToIndex(0); }}
-function goEnd() {{ goToIndex(slides.length - 1); }}
+function goNext() {{
+  if (window.mdslidesNetwork) window.mdslidesNetwork.command({{ action: 'next' }});
+  else goToIndex(currentSlideIndex() + 1);
+}}
+function goPrev() {{
+  if (window.mdslidesNetwork) window.mdslidesNetwork.command({{ action: 'previous' }});
+  else goToIndex(currentSlideIndex() - 1);
+}}
+function goHome() {{
+  if (window.mdslidesNetwork) window.mdslidesNetwork.command({{ action: 'first' }});
+  else goToIndex(0);
+}}
+function goEnd() {{
+  if (window.mdslidesNetwork) window.mdslidesNetwork.command({{ action: 'last' }});
+  else goToIndex(slides.length - 1);
+}}
 function keyData(e) {{
   return {{
     key: (e.key || ''),
@@ -3782,6 +3804,10 @@ window.addEventListener('scroll', () => {{
   _hashSyncTimer = window.setTimeout(() => {{
     const idx = currentSlideIndex();
     if (idx !== _currentIdx) {{
+      if (window.mdslidesNetwork && !window.mdslidesNetwork.applying) {{
+        window.mdslidesNetwork.navigate(idx);
+        return;
+      }}
       _currentIdx = idx;
       refreshFooterVisibility(idx);
       setActiveSlide(idx);
@@ -3789,6 +3815,22 @@ window.addEventListener('scroll', () => {{
     }}
   }}, 120);
 }}, {{ passive: true }});
+
+window.mdslides = {{
+  applyState(state) {{
+    if (Array.isArray(state.notes)) speakerNotes[state.index] = state.notes;
+    if (_currentIdx !== state.index || _activeRevealIdx !== state.index) goToIndex(state.index, false);
+    renderSpeakerNotes(state.index);
+    if (timerEl) {{
+      if (_timerFrame) cancelAnimationFrame(_timerFrame);
+      _timerStartedAt = state.running ? Date.now() - state.elapsed * 1000 : 0;
+      timerEl.textContent = `${{Math.floor(timerDurationSeconds / 60)}}:${{String(timerDurationSeconds % 60).padStart(2, '0')}}`;
+      timerEl.style.setProperty('--timer-progress', '0');
+      timerEl.classList.remove('is-expired');
+      renderTimer();
+    }}
+  }}
+}};
 </script>
 </body>
 </html>"""
@@ -3860,6 +3902,18 @@ def main() -> None:
     if not os.path.isfile(source_file):
         print(f"❌  Fichier markdown introuvable: {source_file}")
         sys.exit(1)
+
+    if "--serve" in args:
+        if watch:
+            print("❌  --serve et --watch ne peuvent pas etre combines. Redemarrez le serveur apres modification.")
+            sys.exit(1)
+        from serve import serve
+        try:
+            serve(source_file, load_font(), args)
+        except (OSError, ValueError, RuntimeError) as error:
+            print(f"❌  {error}", file=sys.stderr)
+            sys.exit(1)
+        return
 
     os.makedirs(CONF_DIR, exist_ok=True)
 
