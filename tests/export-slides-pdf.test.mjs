@@ -8,6 +8,7 @@ import { promisify } from 'node:util';
 import { inflateSync } from 'node:zlib';
 import test from 'node:test';
 import { PDFDocument, PDFName } from 'pdf-lib';
+import { browserCandidates } from '../scripts/export-slides-pdf.mjs';
 
 const run = promisify(execFile);
 const script = fileURLToPath(new URL('../scripts/export-slides-pdf.mjs', import.meta.url));
@@ -17,6 +18,25 @@ async function workspace(t) {
   t.after(() => rm(directory, { recursive: true, force: true }));
   return directory;
 }
+
+test('browser detection covers Windows system and per-user installations, preferring Edge', () => {
+  const candidates = browserCandidates('win32', {
+    ProgramFiles: 'D:\\Program Files',
+    'ProgramFiles(x86)': 'D:\\Program Files (x86)',
+    LOCALAPPDATA: 'C:\\Users\\Alice\\AppData\\Local',
+  }, '');
+  assert.equal(candidates[0], 'D:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe');
+  assert.ok(candidates.includes('D:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe'));
+  assert.ok(candidates.includes('C:\\Users\\Alice\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe'));
+  assert.ok(browserCandidates('win32', {}, '').every(candidate => path.win32.isAbsolute(candidate)));
+});
+
+test('browser detection covers macOS user apps and Linux PATH', () => {
+  assert.ok(browserCandidates('darwin', {}, '/Users/alice')
+    .includes('/Users/alice/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge'));
+  assert.ok(browserCandidates('linux', { PATH: '/custom/bin:/usr/bin' }, '/home/alice')
+    .includes('/custom/bin/chromium'));
+});
 
 test('HTML export creates one HD image per slide and hides private controls', async t => {
   const directory = await workspace(t);
@@ -53,6 +73,9 @@ test('custom output directories are created and invalid inputs fail explicitly',
   await run(process.execPath, [script, input, '-o', output]);
   assert.equal((await PDFDocument.load(await readFile(output))).getPageCount(), 1);
   await assert.rejects(run(process.execPath, [script, input, '-o', input]), /Output must be a .pdf/);
+  await assert.rejects(run(process.execPath, [
+    script, input, '--browser', path.join(directory, 'missing-browser'),
+  ]), /Browser executable not found/);
   await assert.rejects(run(process.execPath, [script, '--unknown']), /Unknown option/);
   await assert.rejects(run(process.execPath, [script]), /exactly one/);
   await writeFile(input, '<html><body>No slides</body></html>');

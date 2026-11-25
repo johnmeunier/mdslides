@@ -32,6 +32,7 @@ This repository generates HTML presentations from Markdown files, then exports t
 
 - Python 3 to generate the HTML
 - Node.js and npm for PDF export
+- An installed Microsoft Edge, Google Chrome or Chromium browser for PDF export
 
 ## Installation
 
@@ -39,11 +40,11 @@ If you want to export to PDF, install the Node.js dependencies once at the proje
 
 ```bash
 npm install
-npx playwright install chromium
 ```
 
-The exporter uses Playwright's headless Chromium browser. On Linux, use
-`npx playwright install --with-deps chromium` if browser system libraries are missing.
+The exporter uses `puppeteer-core` to run an already installed browser in headless
+mode. No browser executable is downloaded during installation or export.
+Enterprise policies must allow headless browser execution.
 
 ## Generate HTML from Markdown
 
@@ -227,6 +228,24 @@ Use `--output` or `-o` to choose the name or directory of the generated PDF:
 npm run slides:pdf -- <PATH_TO_MD_FILE> --output <PATH_TO_PDF_FILE>
 npm run slides:pdf -- <PATH_TO_MD_FILE> --output <OUTPUT_DIRECTORY>/<PDF_FILE_NAME>
 npm run slides:pdf -- <PATH_TO_MD_FILE> -o <OUTPUT_DIRECTORY>/<PDF_FILE_NAME>
+```
+
+### Browser Selection
+
+Edge and Chrome are detected in their standard Windows installation directories
+(including per-user installations), Chrome/Edge/Chromium in system and user
+Applications directories on macOS, and common browser executables on `PATH` on
+Linux. Edge is preferred on Windows. If no browser is found, the command fails
+with an explicit error; it never downloads one.
+
+For a non-standard installation, use `--browser` with the executable's full path:
+
+```powershell
+npm run slides:pdf -- presentation.md --browser "C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe"
+```
+
+```bash
+npm run slides:pdf -- presentation.md --browser "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 ```
 
 ### HD Quality
