@@ -39,7 +39,11 @@ If you want to export to PDF, install the Node.js dependencies once at the proje
 
 ```bash
 npm install
+npx playwright install chromium
 ```
+
+The exporter uses Playwright's headless Chromium browser. On Linux, use
+`npx playwright install --with-deps chromium` if browser system libraries are missing.
 
 ## Generate HTML from Markdown
 
@@ -234,6 +238,11 @@ Specifically:
 - slides are rendered in high definition before being assembled into the PDF
 - interactive elements that are not useful in PDF format are hidden
 - each PDF page corresponds to the final visible state of a slide
+
+The render uses a 1920 x 1080 viewport at 2x resolution (3840 x 2160 pixels)
+and a 16:9 PDF page. Fonts, images and Mermaid diagrams are awaited before capture.
+The PDF contains slide images, so its text is not selectable. External resources
+(fonts, diagrams and embeds) may require Internet access.
 
 ## Recommended Workflow
 

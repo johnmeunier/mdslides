@@ -6,6 +6,7 @@
     "slides:pdf": "node scripts/export-slides-pdf.mjs"
   },
   "dependencies": {
-    "pdf-lib": "^1.17.1"
+    "pdf-lib": "^1.17.1",
+    "playwright": "^1.58.0"
   }
 }
